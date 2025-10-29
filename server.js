@@ -44,6 +44,12 @@ function auth(req, res, next) {
   }
 }
 
+// Servi reset.html per i link di reset password
+app.get('/auth/reset/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reset.html'));
+});
+
+
 // === USA AUTHROUTES ===
 app.use('/auth', authRoutes);
 
@@ -142,3 +148,4 @@ io.on('connection', socket => {
 
 // === AVVIO SERVER ===
 server.listen(PORT, () => console.log(`✅ Server avviato su http://localhost:${PORT}`));
+
