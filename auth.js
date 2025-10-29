@@ -10,7 +10,7 @@ const router = express.Router();
 router.use(cookieParser());
 
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');
-const SECRET = 'supersecretkey';
+const SECRET = 'supersecretkey'; // token JWT
 
 // === FILE FUNCTIONS ===
 function readUsers() {
@@ -21,12 +21,14 @@ function writeUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-// === MAIL TRANSPORT ===
+// === MAILJET SMTP ===
 const transporter = nodemailer.createTransport({
-  service: 'Mailjet',
+  host: "in-v3.mailjet.com",
+  port: 587,
+  secure: false, // true se port 465
   auth: {
-    user: 'smart.flashcards@mail.com',
-    pass: 'c07a08a60161be9bafcadab355f4dc3f'
+    user: "c07a08a60161be9bafcadab355f4dc3f",   // API Key
+    pass: "07a3d302f2a173dd097be3728e4f04ce"    // Secret Key
   }
 });
 
@@ -61,7 +63,8 @@ router.post('/register', (req, res) => {
     from: 'smart.flashcards@mail.com',
     to: email,
     subject: 'Conferma la tua registrazione',
-    text: `Clicca qui per verificare la tua email: ${verifyLink}`
+    text: `Clicca qui per verificare la tua email: ${verifyLink}`,
+    html: `<p>Clicca qui per verificare la tua email: <a href="${verifyLink}">${verifyLink}</a></p>`
   });
 
   res.json({ message: 'Registrazione completata. Controlla la tua email per confermare.' });
@@ -135,7 +138,8 @@ router.post('/forgot', (req, res) => {
     from: 'smart.flashcards@mail.com',
     to: email,
     subject: 'Recupero password',
-    text: `Clicca qui per reimpostare la password: ${resetLink}`
+    text: `Clicca qui per reimpostare la password: ${resetLink}`,
+    html: `<p>Clicca qui per reimpostare la password: <a href="${resetLink}">${resetLink}</a></p>`
   });
 
   res.json({ message: 'Email di recupero inviata' });
@@ -159,4 +163,3 @@ router.post('/reset/:token', (req, res) => {
 });
 
 module.exports = router;
-
