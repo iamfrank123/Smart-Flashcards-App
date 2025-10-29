@@ -14,7 +14,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const SECRET = 'supersecretkey';
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -148,4 +148,5 @@ io.on('connection', socket => {
 
 // === AVVIO SERVER ===
 server.listen(PORT, () => console.log(`✅ Server avviato su http://localhost:${PORT}`));
+
 
