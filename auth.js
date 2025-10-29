@@ -3,6 +3,7 @@ const path = require('path');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 // ---- MAILJET ----
 const Mailjet = require('node-mailjet');
@@ -11,14 +12,16 @@ const mailjet = Mailjet.apiConnect(
   '07a3d302f2a173dd097be3728e4f04ce'  // SECRET KEY
 );
 
-// Base URL del tuo sito Render
 const BASE_URL = 'https://smart-flashcards-app.onrender.com';
-
-// Mittente verificato su Mailjet
 const SENDER_EMAIL = 'smart.flashcards@mail.com';
 const SENDER_NAME = 'Smart Flashcards';
+const JWT_SECRET = 'supersecretkey';
+const JWT_EXPIRE = '2h'; // durata token
 
-// Funzione invio email reset password
+const router = express.Router();
+const usersFile = path.join(__dirname,'data','users.json');
+
+// --- Funzioni Mail ---
 async function sendResetEmail(toEmail, token) {
   const resetUrl = `${BASE_URL}/auth/reset/${token}`;
   return mailjet.post("send", {'version':'v3.1'}).request({
@@ -32,7 +35,6 @@ async function sendResetEmail(toEmail, token) {
   });
 }
 
-// Funzione invio email verifica account
 async function sendVerificationEmail(toEmail, token) {
   const verifyUrl = `${BASE_URL}/auth/verify/${token}`;
   return mailjet.post("send", {'version':'v3.1'}).request({
@@ -45,23 +47,18 @@ async function sendVerificationEmail(toEmail, token) {
     }]
   });
 }
-// ---- FINE MAILJET ----
 
-const router = express.Router();
-const usersFile = path.join(__dirname,'data','users.json');
-
-// Carica utenti
+// --- Gestione utenti ---
 function loadUsers() {
   if(!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, '[]');
   return JSON.parse(fs.readFileSync(usersFile));
 }
 
-// Salva utenti
 function saveUsers(users) {
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
 
-// === REGISTRAZIONE ===
+// --- REGISTRAZIONE ---
 router.post('/register', async (req,res)=>{
   const {username,email,password} = req.body;
   if(!username||!email||!password) return res.status(400).json({error:'Campi mancanti'});
@@ -93,7 +90,7 @@ router.post('/register', async (req,res)=>{
   }
 });
 
-// === VERIFICA EMAIL ===
+// --- VERIFICA EMAIL ---
 router.get('/verify/:token', (req,res)=>{
   const {token} = req.params;
   let users = loadUsers();
@@ -105,19 +102,22 @@ router.get('/verify/:token', (req,res)=>{
   res.send('Email verificata! Ora puoi fare login.');
 });
 
-// === LOGIN ===
+// --- LOGIN ---
 router.post('/login', async (req,res)=>{
   const {email,password} = req.body;
   let users = loadUsers();
   const user = users.find(u=>u.email===email);
   if(!user) return res.status(400).json({error:'Email non registrata'});
   if(!user.verified) return res.status(400).json({error:'Email non verificata'});
+
   const ok = await bcrypt.compare(password, user.password);
   if(!ok) return res.status(400).json({error:'Password errata'});
-  res.json({user:{id:user.id,username:user.username,email:user.email}});
+
+  const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRE });
+  res.json({user:{id:user.id,username:user.username,email:user.email}, token});
 });
 
-// === RECUPERO PASSWORD ===
+// --- RECUPERO PASSWORD ---
 router.post('/forgot', async (req,res)=>{
   const {email} = req.body;
   let users = loadUsers();
@@ -138,7 +138,7 @@ router.post('/forgot', async (req,res)=>{
   }
 });
 
-// === RESET PASSWORD ===
+// --- RESET PASSWORD ---
 router.post('/reset/:token', async (req,res)=>{
   const {token} = req.params;
   const {password} = req.body;
