@@ -4,49 +4,57 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-// ---- INIZIO: Mailjet ----
+// ---- MAILJET ----
 const Mailjet = require('node-mailjet');
-const mailjet = Mailjet.apiConnect('c07a08a60161be9bafcadab355f4dc3f', '07a3d302f2a173dd097be3728e4f04ce');
+const mailjet = Mailjet.apiConnect(
+  'c07a08a60161be9bafcadab355f4dc3f', // API KEY
+  '07a3d302f2a173dd097be3728e4f04ce'  // SECRET KEY
+);
 
-// Email reset password
+// Base URL del tuo sito Render
+const BASE_URL = 'https://smart-flashcards-app.onrender.com';
+
+// Mittente verificato su Mailjet
+const SENDER_EMAIL = 'mittente-verificato@tuodominio.com';
+const SENDER_NAME = 'Smart Flashcards';
+
+// Funzione invio email reset password
 async function sendResetEmail(toEmail, token) {
-  const resetUrl = `http://localhost:3000/auth/reset/${token}`;
+  const resetUrl = `${BASE_URL}/auth/reset/${token}`;
   return mailjet.post("send", {'version':'v3.1'}).request({
     Messages:[{
-      From: { Email: "freemidis@gmail.com", Name: "Flashcards App" },
+      From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
       To: [{ Email: toEmail }],
-      Subject: "Recupero password — Flashcards",
+      Subject: "Recupero password — Smart Flashcards",
       TextPart: `Clicca qui per reimpostare la password: ${resetUrl}`,
       HTMLPart: `<p>Clicca per reimpostare la password: <a href="${resetUrl}">${resetUrl}</a></p>`
     }]
   });
 }
 
-// Email verifica account
+// Funzione invio email verifica account
 async function sendVerificationEmail(toEmail, token) {
-  const verifyUrl = `http://localhost:3000/auth/verify/${token}`;
+  const verifyUrl = `${BASE_URL}/auth/verify/${token}`;
   return mailjet.post("send", {'version':'v3.1'}).request({
     Messages:[{
-      From: { Email: "freemidis@gmail.com", Name: "Flashcards App" },
+      From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
       To: [{ Email: toEmail }],
-      Subject: "Verifica Email — Flashcards",
+      Subject: "Verifica Email — Smart Flashcards",
       TextPart: `Clicca qui per verificare la tua email: ${verifyUrl}`,
       HTMLPart: `<p>Clicca per verificare la tua email: <a href="${verifyUrl}">${verifyUrl}</a></p>`
     }]
   });
 }
-// ---- FINE: Mailjet ----
+// ---- FINE MAILJET ----
 
 const router = express.Router();
 const usersFile = path.join(__dirname,'data','users.json');
 
-// Carica utenti
 function loadUsers() {
   if(!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, '[]');
   return JSON.parse(fs.readFileSync(usersFile));
 }
 
-// Salva utenti
 function saveUsers(users) {
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
