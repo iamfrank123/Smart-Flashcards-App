@@ -15,7 +15,7 @@ const mailjet = Mailjet.apiConnect(
 const BASE_URL = 'https://smart-flashcards-app.onrender.com';
 
 // Mittente verificato su Mailjet
-const SENDER_EMAIL = 'mittente-verificato@tuodominio.com';
+const SENDER_EMAIL = 'smart.flashcards@mail.com';
 const SENDER_NAME = 'Smart Flashcards';
 
 // Funzione invio email reset password
@@ -50,11 +50,13 @@ async function sendVerificationEmail(toEmail, token) {
 const router = express.Router();
 const usersFile = path.join(__dirname,'data','users.json');
 
+// Carica utenti
 function loadUsers() {
   if(!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, '[]');
   return JSON.parse(fs.readFileSync(usersFile));
 }
 
+// Salva utenti
 function saveUsers(users) {
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
