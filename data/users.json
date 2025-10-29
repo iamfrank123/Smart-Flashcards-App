@@ -1,12 +1,1 @@
-[
-  {
-    "id": 1761756744465,
-    "username": "Franco",
-    "email": "freemidis@gmail.com",
-    "password": "$2b$10$j6ljk7Y1nTMOP.rnnWq1weNliY0VRvAdEWbjr5EpRHvwW1lvnEtWe",
-    "verified": true,
-    "verifyToken": "c579d02cae0a569cd6f22d58efe8ee168a3f804f",
-    "resetToken": null,
-    "resetExpire": null
-  }
-]
+[]
