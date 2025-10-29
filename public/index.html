@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flashcards App — Prototype</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Flashcards</div>
+    <nav class="nav">
+      <button id="btnNewFolder" class="btn small">Nuova cartella</button>
+      <button id="btnNewList" class="btn small">Nuova lista</button>
+      <button id="btnImport" class="btn small">Importa</button>
+      <button id="btnExport" class="btn small">Esporta lista</button>
+      <span id="userArea">
+        <button id="btnLogin" class="btn">Accedi</button>
+        <button id="btnRecover" class="btn">Recupera Password</button>
+        <button id="btnRegister" class="btn outline">Registrati</button>
+      </span>
+      <span id="userMenu" class="hidden">
+        <span id="usernameLabel"></span>
+        <button id="btnLogout" class="btn small">Esci</button>
+      </span>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h3>Cartelle</h3>
+      <ul id="foldersList" class="list"></ul>
+      <hr>
+      <h4>Liste</h4>
+      <ul id="listsList" class="list"></ul>
+    </aside>
+
+    <section class="editor">
+      <div class="editor-top">
+        <input id="listTitle" placeholder="Nome lista (es: Numeri da 1 a 20)" class="input title" />
+        <div class="small muted">Inserisci testo fronte e retro nei box, poi clicca "Genera".</div>
+      </div>
+
+      <div class="boxes">
+        <div class="box">
+          <label>Box 1 — Fronte</label>
+          <textarea id="box1" placeholder="Scrivi parole (una per riga) o frase..."></textarea>
+        </div>
+        <div class="box">
+          <label>Box 2 — Retro</label>
+          <textarea id="box2" placeholder="Traduzioni (una per riga), o corrispondenza con fronte..."></textarea>
+        </div>
+      </div>
+
+      <div class="controls">
+        <label><input type="checkbox" id="alignNumbers"> Allinea per numeri (es. "1. uno")</label>
+        <div class="right">
+          <button id="btnPreview" class="btn">Anteprima</button>
+          <button id="btnGenerate" class="btn primary">Genera flashcards</button>
+          <button id="btnSaveList" class="btn">Salva lista</button>
+          <button id="btnResetCards">Reset Flashcards</button>
+        </div>
+      </div>
+
+      <div id="message" class="message"></div>
+
+      <div id="mappingArea" class="mapping hidden"></div>
+
+      <div id="cards" class="cards" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="fileImport" accept=".json" class="hidden" />
+
+  <!-- Auth / Register Modal -->
+  <div id="modalAuth" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <button class="modal-close" data-action="close">&times;</button>
+      <div id="authTabs">
+        <button class="tab active" data-tab="login">Accedi</button>
+        <button class="tab" data-tab="register">Registrati</button>
+      </div>
+
+      <form id="formLogin" class="auth-form">
+        <label>Email<input type="email" id="loginEmail" required></label>
+        <label>Password<input type="password" id="loginPassword" required></label>
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Accedi</button>
+        </div>
+      </form>
+
+      <form id="formRegister" class="auth-form hidden">
+        <label>Nome utente<input id="regUsername" required></label>
+        <label>Email<input type="email" id="regEmail" required></label>
+        <label>Password<input type="password" id="regPassword" required minlength="6"></label>
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Crea account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Templates (hidden) -->
+  <template id="tplFolderItem">
+    <li class="list-item"><span class="name"></span>
+      <div class="actions">
+        <button class="btn tiny rename">Rinomina</button>
+        <button class="btn tiny del">Elimina</button>
+      </div>
+    </li>
+  </template>
+
+  <template id="tplListItem">
+    <li class="list-item"><span class="name"></span>
+      <div class="actions">
+        <button class="btn tiny open">Apri</button>
+        <button class="btn tiny rename">Rinomina</button>
+        <button class="btn tiny del">Elimina</button>
+      </div>
+    </li>
+  </template>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/script.js" defer></script>
+</body>
+</html>
