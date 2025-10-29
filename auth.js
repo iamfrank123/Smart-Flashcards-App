@@ -3,14 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
-const cookieParser = require('cookie-parser');
+const Mailjet = require('node-mailjet');
 
 const router = express.Router();
-router.use(cookieParser());
 
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');
-const SECRET = 'supersecretkey'; // token JWT
+const SECRET = 'supersecretkey';
 
 // === FILE FUNCTIONS ===
 function readUsers() {
@@ -21,16 +19,23 @@ function writeUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-// === MAILJET SMTP ===
-const transporter = nodemailer.createTransport({
-  host: "in-v3.mailjet.com",
-  port: 587,
-  secure: false, // true se port 465
-  auth: {
-    user: "c07a08a60161be9bafcadab355f4dc3f",   // API Key
-    pass: "07a3d302f2a173dd097be3728e4f04ce"    // Secret Key
-  }
-});
+// === MAILJET CLIENT ===
+const mailjet = Mailjet.apiConnect(
+  'c07a08a60161be9bafcadab355f4dc3f', // API Key pubblica
+  '07a3d302f2a173dd097be3728e4f04ce'  // API Key privata (secret)
+);
+
+function sendMail(toEmail, subject, text, html) {
+  return mailjet.post("send", {'version':'v3.1'}).request({
+    Messages: [{
+      From: { Email: "smart.flashcards@mail.com", Name: "Smart Flashcards" },
+      To: [{ Email: toEmail }],
+      Subject: subject,
+      TextPart: text,
+      HTMLPart: html
+    }]
+  });
+}
 
 // === GENERA TOKEN JWT ===
 function generateToken(user) {
@@ -38,7 +43,7 @@ function generateToken(user) {
 }
 
 // === REGISTRAZIONE ===
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
   const users = readUsers();
 
@@ -54,24 +59,21 @@ router.post('/register', (req, res) => {
     password: hashed,
     verified: false
   };
-
   users.push(user);
   writeUsers(users);
 
   const verifyLink = `https://smart-flashcards-app.onrender.com/auth/verify/${user.id}`;
-  transporter.sendMail({
-    from: 'smart.flashcards@mail.com',
-    to: email,
-    subject: 'Conferma la tua registrazione',
-    text: `Clicca qui per verificare la tua email: ${verifyLink}`,
-    html: `<p>Clicca qui per verificare la tua email: <a href="${verifyLink}">${verifyLink}</a></p>`
-  });
+  await sendMail(email, 
+    "Verifica Email — Smart Flashcards", 
+    `Clicca qui per verificare la tua email: ${verifyLink}`, 
+    `<p>Clicca per verificare la tua email: <a href="${verifyLink}">${verifyLink}</a></p>`
+  );
 
   res.json({ message: 'Registrazione completata. Controlla la tua email per confermare.' });
 });
 
 // === VERIFICA EMAIL ===
-router.get('/verify/:id', (req, res) => {
+router.get('/verify/:id', (req,res) => {
   const users = readUsers();
   const user = users.find(u => u.id === req.params.id);
   if (!user) return res.status(400).send('Utente non trovato.');
@@ -81,31 +83,22 @@ router.get('/verify/:id', (req, res) => {
 });
 
 // === LOGIN ===
-router.post('/login', (req, res) => {
+router.post('/login', (req,res) => {
   const { email, password } = req.body;
   const users = readUsers();
   const user = users.find(u => u.email === email);
-
   if (!user) return res.status(400).json({ error: 'Utente non trovato' });
   if (!bcrypt.compareSync(password, user.password)) return res.status(400).json({ error: 'Password errata' });
   if (!user.verified) return res.status(400).json({ error: 'Email non verificata' });
 
   const token = generateToken(user);
-
-  // salva token in cookie httpOnly per 7 giorni
-  res.cookie('token', token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'None',
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
-
+  res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 7*24*60*60*1000 });
   res.json({ message: 'Login riuscito', username: user.username });
 });
 
 // === AUTOLOGIN CON COOKIE ===
-router.get('/autologin', (req, res) => {
-  const token = req.cookies.token;
+router.get('/autologin', (req,res) => {
+  const token = req.cookies?.token;
   if (!token) return res.status(401).json({ error: 'Nessun token' });
   try {
     const decoded = jwt.verify(token, SECRET);
@@ -119,13 +112,13 @@ router.get('/autologin', (req, res) => {
 });
 
 // === LOGOUT ===
-router.post('/logout', (req, res) => {
+router.post('/logout', (req,res) => {
   res.clearCookie('token', { httpOnly: true, secure: true, sameSite: 'None' });
   res.json({ message: 'Logout eseguito' });
 });
 
-// === RESET PASSWORD: INVIO LINK ===
-router.post('/forgot', (req, res) => {
+// === RESET PASSWORD ===
+router.post('/forgot', async (req,res) => {
   const { email } = req.body;
   const users = readUsers();
   const user = users.find(u => u.email === email);
@@ -133,27 +126,22 @@ router.post('/forgot', (req, res) => {
 
   const resetToken = jwt.sign({ id: user.id }, SECRET, { expiresIn: '1h' });
   const resetLink = `https://smart-flashcards-app.onrender.com/auth/reset/${resetToken}`;
-
-  transporter.sendMail({
-    from: 'smart.flashcards@mail.com',
-    to: email,
-    subject: 'Recupero password',
-    text: `Clicca qui per reimpostare la password: ${resetLink}`,
-    html: `<p>Clicca qui per reimpostare la password: <a href="${resetLink}">${resetLink}</a></p>`
-  });
-
+  await sendMail(email, 
+    "Recupero password — Smart Flashcards", 
+    `Clicca qui per reimpostare la password: ${resetLink}`,
+    `<p>Clicca per reimpostare la password: <a href="${resetLink}">${resetLink}</a></p>`
+  );
   res.json({ message: 'Email di recupero inviata' });
 });
 
 // === RESET PASSWORD: NUOVA PASSWORD ===
-router.post('/reset/:token', (req, res) => {
+router.post('/reset/:token', (req,res) => {
   const { password } = req.body;
   try {
     const decoded = jwt.verify(req.params.token, SECRET);
     const users = readUsers();
     const user = users.find(u => u.id === decoded.id);
     if (!user) return res.status(400).json({ error: 'Utente non trovato' });
-
     user.password = bcrypt.hashSync(password, 10);
     writeUsers(users);
     res.json({ message: 'Password aggiornata con successo' });
