@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset Password - Smart Flashcards</title>
+<style>
+  body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  form { display: flex; flex-direction: column; width: 300px; }
+  input { margin: 10px 0; padding: 10px; font-size: 16px; }
+  button { padding: 10px; font-size: 16px; cursor: pointer; }
+  .message { margin-top: 10px; color: green; }
+  .error { color: red; }
+</style>
+</head>
+<body>
+<form id="resetForm">
+  <h2>Reimposta Password</h2>
+  <input type="password" id="password" placeholder="Nuova password" required>
+  <input type="password" id="confirm" placeholder="Conferma password" required>
+  <button type="submit">Aggiorna Password</button>
+  <div class="message" id="msg"></div>
+</form>
+
+<script>
+  const urlParts = window.location.pathname.split('/');
+  const token = urlParts[urlParts.length - 1];
+  const form = document.getElementById('resetForm');
+  const msg = document.getElementById('msg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm').value;
+
+    if (password !== confirm) {
+      msg.textContent = "Le password non corrispondono";
+      msg.className = "error";
+      return;
+    }
+
+    try {
+      const res = await fetch(`/auth/reset/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        msg.textContent = data.message;
+        msg.className = "message";
+      } else {
+        msg.textContent = data.error || 'Errore';
+        msg.className = "error";
+      }
+    } catch (err) {
+      msg.textContent = 'Errore di connessione';
+      msg.className = "error";
+    }
+  });
+</script>
+</body>
+</html>
